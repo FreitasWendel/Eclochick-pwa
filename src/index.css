@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+@theme {
+  --color-eclo-green: #2D8133;
+  --color-eclo-light-green: #5AB45F;
+  --color-eclo-bg: #F5F5F5;
+  --color-eclo-lime: #C6FF00;
+}
+
+body {
+  background-color: var(--color-eclo-bg);
+  font-family: 'Roboto', sans-serif;
+  margin: 0;
+  padding: 0;
+}
