@@ -3,46 +3,47 @@ import { useState, useEffect } from 'react';
 import { ref, onValue, update } from 'firebase/database';
 import { db } from '../services/firebase';
 import { Thermometer, Droplets, AlertTriangle, RefreshCw, Save } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 export default function Config() {
-  // Estado local para os campos do formulário
   const [config, setConfig] = useState({
-    temp_alvo: 0,
-    umid_alvo: 0,
-    alerta_temperatura: 0,
-    viragem_automatica: false,
+    temp_alvo: 37.5,
+    umid_alvo: 60,
+    alerta_temperatura: 39.0,
+    viragem_automatica: true,
   });
-
+  const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
-  const [mensagem, setMensagem] = useState('');
 
-  // Busca as configurações atuais assim que a tela abre
+  // 1. Buscar configurações em tempo real
   useEffect(() => {
     const configRef = ref(db, 'config');
     const unsubscribe = onValue(configRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        setConfig({
-          temp_alvo: data.temp_alvo || 0,
-          umid_alvo: data.umid_alvo || 0,
-          alerta_temperatura: data.alerta_temperatura || 0,
-          viragem_automatica: data.viragem_automatica || false,
-        });
+        setConfig((prev) => ({
+          ...prev,
+          temp_alvo: Number(data.temp_alvo) || 37.5,
+          umid_alvo: Number(data.umid_alvo) || 60,
+          alerta_temperatura: Number(data.alerta_temperatura) || 39.0,
+          viragem_automatica: Boolean(data.viragem_automatica),
+        }));
       }
+      setCarregando(false);
     });
+
     return () => unsubscribe();
   }, []);
 
-  // Função para lidar com a mudança dos inputs numéricos
+  // 2. Handlers
   const handleChange = (e) => {
     const { name, value } = e.target;
     setConfig((prev) => ({
       ...prev,
-      [name]: parseFloat(value) || 0,
+      [name]: value === '' ? '' : Number(value), // Permite apagar o campo temporariamente
     }));
   };
 
-  // Função para alternar o switch (viragem automática)
   const toggleViragem = () => {
     setConfig((prev) => ({
       ...prev,
@@ -50,26 +51,35 @@ export default function Config() {
     }));
   };
 
-  // Função para salvar no Firebase
-  const salvarConfiguracoes = async () => {
+  const handleSalvar = async () => {
+    // Validação básica antes de salvar
+    if (config.temp_alvo === '' || config.umid_alvo === '') {
+      toast.error('Preencha todos os campos obrigatórios.');
+      return;
+    }
+
     setSalvando(true);
-    setMensagem('');
-    
+    const loadingToast = toast.loading('Salvando configurações...');
+
     try {
       const configRef = ref(db, 'config');
-      // O update() altera apenas os campos passados, mantendo o resto intacto
       await update(configRef, config);
-      setMensagem('Configurações salvas com sucesso!');
-      
-      // Esconde a mensagem após 3 segundos
-      setTimeout(() => setMensagem(''), 3000);
+      toast.success('Configurações salvas com sucesso!', { id: loadingToast });
     } catch (error) {
-      console.error("Erro ao salvar:", error);
-      setMensagem('Erro ao salvar configurações.');
+      console.error(error);
+      toast.error('Erro ao salvar configurações.', { id: loadingToast });
     } finally {
       setSalvando(false);
     }
   };
+
+  if (carregando) {
+    return (
+      <div className="flex justify-center items-center h-40">
+        <p className="text-gray-500 font-medium animate-pulse">Carregando configurações...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-5 flex flex-col gap-5 pb-24">
@@ -82,19 +92,19 @@ export default function Config() {
         </div>
         
         <div className="flex justify-between items-center">
-          <label className="text-sm text-gray-600">Temperatura Alvo (°C)</label>
+          <label className="text-sm text-gray-600 font-medium">Temperatura Alvo (°C)</label>
           <input 
             type="number" 
             step="0.1"
             name="temp_alvo"
             value={config.temp_alvo}
             onChange={handleChange}
-            className="w-24 p-2 border border-gray-300 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-eclo-green"
+            className="w-24 p-2 border border-gray-300 rounded-lg text-center font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-eclo-green"
           />
         </div>
 
         <div className="flex justify-between items-center">
-          <label className="text-sm text-gray-600 flex items-center gap-1">
+          <label className="text-sm text-gray-600 flex items-center gap-1 font-medium">
             <AlertTriangle size={14} className="text-orange-500"/> 
             Alerta de Temp. (°C)
           </label>
@@ -104,7 +114,7 @@ export default function Config() {
             name="alerta_temperatura"
             value={config.alerta_temperatura}
             onChange={handleChange}
-            className="w-24 p-2 border border-gray-300 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-eclo-green"
+            className="w-24 p-2 border border-gray-300 rounded-lg text-center font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-eclo-green"
           />
         </div>
       </div>
@@ -117,13 +127,13 @@ export default function Config() {
         </div>
         
         <div className="flex justify-between items-center">
-          <label className="text-sm text-gray-600">Umidade Alvo (%)</label>
+          <label className="text-sm text-gray-600 font-medium">Umidade Alvo (%)</label>
           <input 
             type="number" 
             name="umid_alvo"
             value={config.umid_alvo}
             onChange={handleChange}
-            className="w-24 p-2 border border-gray-300 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-eclo-green"
+            className="w-24 p-2 border border-gray-300 rounded-lg text-center font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-eclo-green"
           />
         </div>
       </div>
@@ -146,20 +156,13 @@ export default function Config() {
 
       {/* BOTÃO SALVAR */}
       <button 
-        onClick={salvarConfiguracoes}
+        onClick={handleSalvar}
         disabled={salvando}
-        className={`mt-4 flex items-center justify-center gap-2 w-full py-4 rounded-2xl font-bold text-white shadow-md transition-all ${salvando ? 'bg-gray-400' : 'bg-eclo-green hover:bg-green-800 active:scale-95'}`}
+        className={`mt-2 flex items-center justify-center gap-2 w-full py-4 rounded-2xl font-bold text-white shadow-md transition-all ${salvando ? 'bg-gray-400' : 'bg-eclo-green hover:bg-green-800 active:scale-95'}`}
       >
         <Save size={20} />
         {salvando ? 'Salvando...' : 'Salvar Configurações'}
       </button>
-
-      {/* MENSAGEM DE SUCESSO */}
-      {mensagem && (
-        <div className={`text-center p-3 rounded-lg text-sm font-medium ${mensagem.includes('sucesso') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-          {mensagem}
-        </div>
-      )}
 
     </div>
   );
