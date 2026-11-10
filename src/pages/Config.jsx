@@ -1,5 +1,5 @@
 // src/pages/Config.jsx
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { ref, onValue, update } from 'firebase/database';
 import { db } from '../services/firebase';
 import { Thermometer, Droplets, AlertTriangle, RefreshCw, Save } from 'lucide-react';
@@ -40,7 +40,7 @@ export default function Config() {
     const { name, value } = e.target;
     setConfig((prev) => ({
       ...prev,
-      [name]: value === '' ? '' : Number(value), // Permite apagar o campo temporariamente
+      [name]: value === '' ? '' : Number(value),
     }));
   };
 
@@ -52,7 +52,6 @@ export default function Config() {
   };
 
   const handleSalvar = async () => {
-    // Validação básica antes de salvar
     if (config.temp_alvo === '' || config.umid_alvo === '') {
       toast.error('Preencha todos os campos obrigatórios.');
       return;
@@ -81,11 +80,15 @@ export default function Config() {
     );
   }
 
+  // ⬇️ ESTE DIV É O ELEMENTO PAI QUE ESTAVA FALTANDO ⬇️
   return (
     <div className="p-5 flex flex-col gap-5 pb-24">
-      {!online && (
-        <div className="flex items-center gap-2 p-3 rounded-lg text-sm bg-orange-100 text-orange-700">
-          <WifiOff size={16} /> Sem conexão com o Firebase. Você pode editar, mas só poderá salvar quando a conexão voltar.
+      
+      {/* CARD: CONTROLE DE TEMPERATURA */}
+      <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col gap-4">
+        <div className="flex items-center gap-2 text-gray-700 font-semibold border-b pb-2">
+          <Thermometer size={20} className="text-red-500" />
+          <h2>Temperatura</h2>
         </div>
         
         <div className="flex justify-between items-center">
